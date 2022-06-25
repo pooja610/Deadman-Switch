@@ -6,14 +6,13 @@ import "./Ownable.sol";
 contract DeadmanSwitch is Ownable{
     
     address payable public presetAddress;
-    mapping (address => uint) ownerToLastBlockCalled;
+    uint public lastBlockCalled;
 
     event presetAddressModified(address _oldAddr, address _newAddr);
-    event fundsTransferred(address _from, address _to, uint _amount);
 
     modifier isValidAddr(address _presetAddress){
         require(
-            _presetAddress != address(0),
+            _presetAddress != address(0) && _presetAddress != msg.sender,
             "Sender not authorized."
         );
         _;
@@ -26,6 +25,7 @@ contract DeadmanSwitch is Ownable{
 
     constructor (address _presetAddress) isValidAddr(_presetAddress) {
         presetAddress = payable(_presetAddress);
+        lastBlockCalled = block.number;
     }
 
     
@@ -40,14 +40,13 @@ contract DeadmanSwitch is Ownable{
     }
 
     function still_alive() external{
-        ownerToLastBlockCalled[msg.sender] = block.number;
+       lastBlockCalled = block.number;
     }
 
     function _transferFunds() public payable sufficientBalance(msg.sender) {
-        require((block.number - ownerToLastBlockCalled[msg.sender]) > 10);
+        require((block.number - lastBlockCalled) > 10);
 
-        emit fundsTransferred(msg.sender, presetAddress, msg.sender.balance);
-        payable(presetAddress).transfer((msg.sender).balance);
+        presetAddress.transfer(address(this).balance);
     }
 
     
